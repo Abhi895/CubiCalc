@@ -38,7 +38,7 @@ def getAnswer():
             inputField.delete(0, "end")
             inputField.insert(len(inputField.get()), "Please enter a valid quadratic")
     elif mode == "Cubic":
-        if "x³" in equation:
+        if equation.count("x") <= 3 and equation.count("²") == 1 and equation.count("³") == 1 and equation.count("-") + equation.count:
             print()
     else:
         getNormalAnswer(equation)
@@ -141,17 +141,9 @@ def getNormalAnswer(equation):
     if "(" in equation and equation.count("(") == equation.count(")"):
         while "(" in equation:
             openIndex = len(equation) - equation[::-1].index("(") - 1
-            print(openIndex)
-            print(equation[openIndex])
             closedIndex = [x for x in equation[openIndex:]].index(')') + openIndex
-            print(closedIndex)
-            print(equation)
-
-            print(equation[openIndex+1:closedIndex])
-
             tempAnswer = evaluate(equation[openIndex+1:closedIndex])
             equation = equation[:openIndex] + tempAnswer + equation[closedIndex+1:]
-            print(equation)
 
     elif "(" not in equation:
         print(equation)
