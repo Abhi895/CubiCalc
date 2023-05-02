@@ -1,7 +1,7 @@
  
 from tkinter import *
-import pyglet
-import math
+import cmath
+import numpy as np
 
 
 def find(s, ch):
@@ -30,28 +30,33 @@ def getAnswer():
 
     equalsPressed = True
     equation = inputField.get()
+    validEquation = False
+
     if mode == "Quadratic":
-        if (equation.count("x") <= 2) and equation.count("²") == 1 and equation.count("-") + equation.count("+") <= 3:
+        if (equation.count("x") > 0) and equation.count("²") == 1 and equation.count("-") + equation.count("+") <= 3:
             equationLabel.config(text=equation)
             getQuadraticAnswer(equation)
-        else:
-            inputField.delete(0, "end")
-            inputField.insert(len(inputField.get()), "Please enter a valid quadratic")
+            validEquation = True            
     elif mode == "Cubic":
-        if equation.count("x") <= 3 and equation.count("²") == 1 and equation.count("³") == 1 and equation.count("-") + equation.count:
-            print()
+        if equation.count("x") <= 3 and equation.count("³") == 1 and equation.count("-") + equation.count("+") <= 4:
+            equationLabel.config(text=equation)
+            getCubicAnswer(equation)
+            validEquation = True
     else:
         getNormalAnswer(equation)
+        validEquation = True
 
+    if not validEquation:
+        inputField.delete(0, "end")
+        inputField.insert(len(inputField.get()), "Please enter a valid equation")
 
 def getQuadraticAnswer(quadratic):
     a = 1
-    b = 0
-    c = 0
+    b = c = 0
 
     if quadratic[0] != "x":
-        if quadratic[0] == "-":
-            a = int("".join(x for x in quadratic[1:quadratic.index("x")])) * -1
+        if quadratic[:2] == "-x":
+            a = -1
         else:
             a = int("".join(x for x in quadratic[:quadratic.index("x")]))
 
@@ -75,16 +80,64 @@ def getQuadraticAnswer(quadratic):
         inputField.delete(0, "end")
         quadAnswer = "No roots"
     else:
-        answerOne = ((-b + math.sqrt(discriminant)) / (2 * a))
-        answerTwo = ((-b - math.sqrt(discriminant)) / (2 * a))
-        quadAnswer = "x = " + str(round(answerOne, 3)) + ", " + str(round(answerTwo, 3))
+        answerOne = ((-b + cmath.sqrt(discriminant)) / (2 * a))
+        answerTwo = ((-b - cmath.sqrt(discriminant)) / (2 * a))
+        quadAnswer = "x = " + str(round(answerOne.real, 3)) + ", " + str(round(answerTwo.real, 3))
         inputField.delete(0, "end")
 
     inputField.insert(len(inputField.get()), quadAnswer)
 
-def getIndex(value, arrayOne, arrayTwo):
-    return arrayOne.index((value, [y[1] for y in arrayOne if y[0] == arrayTwo[0]][0]))
+def getCubicAnswer(cubic):
+    a, b, c, d = getCoefficients(cubic)
+    p = c/a - (b**2)/(3*a**2)
+    q = (2*b**3)/(27*a**3) - (b*c)/(3*a**2) + d/a
 
+    print(p, q)
+    
+    discriminant = round((q/2)**2, 3) + round((p/3)**3,3)
+    print(discriminant)
+
+    additionPart = -q/2 + cmath.sqrt(discriminant)
+    subtractionPart = -q/2 - cmath.sqrt(discriminant)
+
+    if discriminant >= 0:
+        answer =str(round(np.cbrt(additionPart.real)+np.cbrt(subtractionPart.real) - b/(3*a), 3))
+        if discriminant == 0:
+            answer += ", " + str(round(-np.cbrt(additionPart.real) - b/(3*a), 3))
+    
+
+    print(additionPart)
+    print(subtractionPart)
+        
+    inputField.delete(0, 'end')
+    inputField.insert(len(inputField.get()), "x = " + answer)
+
+
+def getCoefficients(cubic):
+    coefficents = [0] * 4
+
+    if cubic[0] == "x":
+        cubic = "+" + cubic
+
+    for i in range(cubic.count('x')):
+        index = i
+        cutIndex = 2
+
+        if cubic.index("x") == len(cubic) - 1 or cubic[cubic.index("x")+1] in ["+", "-"]:
+            index = 2
+            cutIndex = 1
+       
+        if cubic[:2] in ["-x", "+x"]:
+            coefficents[index] = int(cubic[:2].replace("x", "1"))
+        else:
+            coefficents[index] = int("".join(x for x in cubic[:cubic.index("x")]))
+        
+        cubic = cubic[cubic.index("x")+cutIndex:]
+
+    if cubic:
+        coefficents[-1] = int(cubic)
+    
+    return coefficents
 
 def evaluate(equation):
 
@@ -259,8 +312,8 @@ def quadraticCalculator():
     mode = "Quadratic"
     modeSwitch.config(text="Quadratic")
     equationLabel.config(text="")
-    # modeSwitch.config(command=lambda: cubicCalculator())
-    modeSwitch.config(command=lambda: normalCalculator())
+    modeSwitch.config(command=lambda: cubicCalculator())
+    # modeSwitch.config(command=lambda: normalCalculator())
     inputField.delete(0, 'end')
     openBracketBtn.destroy()
     xSquaredButton = createButton(125, 40, text="x²")
