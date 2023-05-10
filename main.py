@@ -1,16 +1,8 @@
- 
 from tkinter import *
 import cmath
 import numpy as np
 
-
-def find(s, ch):
-    return [i for i, ltr in enumerate(s) if ltr == ch]
-
-
 def calculate(numOne, numTwo, operation):
-    answer = 0
-
     if operation == "+":
         answer = numOne + numTwo
     elif operation == "*":
@@ -24,54 +16,29 @@ def calculate(numOne, numTwo, operation):
 
     return answer
 
-
 def getAnswer():
-    global equalsPressed
-
-    equalsPressed = True
     equation = inputField.get()
-    validEquation = False
+    equationLabel.config(text=equation)
+
+    inputField.delete(0, END)
 
     if mode == "Quadratic":
         if (equation.count("x") > 0) and equation.count("²") == 1 and equation.count("-") + equation.count("+") <= 3:
-            equationLabel.config(text=equation)
             getQuadraticAnswer(equation)
-            validEquation = True            
+            return
     elif mode == "Cubic":
         if equation.count("x") <= 3 and equation.count("³") == 1 and equation.count("-") + equation.count("+") <= 4:
-            equationLabel.config(text=equation)
             getCubicAnswer(equation)
-            validEquation = True
+            return
     else:
         getNormalAnswer(equation)
-        validEquation = True
+        return
 
-    if not validEquation:
-        inputField.delete(0, "end")
-        inputField.insert(len(inputField.get()), "Please enter a valid equation")
+    inputField.insert(len(inputField.get()), "Please enter a valid equation")
 
 def getQuadraticAnswer(quadratic):
-    a = 1
-    b = c = 0
-
-    if quadratic[0] != "x":
-        if quadratic[:2] == "-x":
-            a = -1
-        else:
-            a = int("".join(x for x in quadratic[:quadratic.index("x")]))
-
-    if quadratic.count('x') > 1:
-        if quadratic[quadratic.index("²") + 2] != "x":
-            b = int("".join([x for x in quadratic[quadratic.index("²") + 2:quadratic.replace("x", "", 1).find('x')+1]]))
-            if quadratic[quadratic.index("²") + 1] == "-":
-                b *= -1
-        else:
-            b = 1
-
-    if quadratic[-1] != "x":
-        c = int("".join([quadratic[::-1][x] for x in range(quadratic[::-1].index("x") - 1)][::-1]))
-        if quadratic[::-1][quadratic[::-1].index("x") - 1] == "-":
-            c *= -1
+    a,b,c = getCoefficients(quadratic, 3)
+    print(a,b,c)
 
     discriminant = b ** 2 - 4 * a * c
     print(str(discriminant))
@@ -88,13 +55,13 @@ def getQuadraticAnswer(quadratic):
     inputField.insert(len(inputField.get()), quadAnswer)
 
 def getCubicAnswer(cubic):
-    a, b, c, d = getCoefficients(cubic)
+    a, b, c, d = getCoefficients(cubic, 4)
     p = c/a - (b**2)/(3*a**2)
     q = (2*b**3)/(27*a**3) - (b*c)/(3*a**2) + d/a
 
     print(p, q)
     
-    discriminant = round((q/2)**2, 3) + round((p/3)**3,3)
+    discriminant = round((q/2)**2, 5) + round((p/3)**3, 5)
     print(discriminant)
 
     additionPart = -q/2 + cmath.sqrt(discriminant)
@@ -104,44 +71,53 @@ def getCubicAnswer(cubic):
         answer =str(round(np.cbrt(additionPart.real)+np.cbrt(subtractionPart.real) - b/(3*a), 3))
         if discriminant == 0:
             answer += ", " + str(round(-np.cbrt(additionPart.real) - b/(3*a), 3))
-    
-
-    print(additionPart)
-    print(subtractionPart)
+    else:
+        print(additionPart)
+        realPart = additionPart.real
+        complexPart = additionPart.imag
+        r = cmath.sqrt((realPart**2 + complexPart**2)).real
+        if realPart != 0:
+            theta = cmath.atan(complexPart/realPart).real
+            if theta < 0:
+                theta = cmath.pi + theta
+        else:
+            theta = (cmath.pi)/2
         
+        answers = [(2*(np.cbrt(r) * (cmath.cos((theta+2*x*cmath.pi)/3))).real) - b/(3*a) for x in range(3)]
+        print(answers)
+        answer = ", ".join([str(round(ans, 3)) for ans in sorted(answers)])
+
     inputField.delete(0, 'end')
     inputField.insert(len(inputField.get()), "x = " + answer)
 
+def getCoefficients(equation, numCoefficients):
+    coefficents = [0] * numCoefficients
+    
+    if equation[0] == "x":
+        equation = "+" + equation
 
-def getCoefficients(cubic):
-    coefficents = [0] * 4
-
-    if cubic[0] == "x":
-        cubic = "+" + cubic
-
-    for i in range(cubic.count('x')):
+    for i in range(equation.count('x')):
         index = i
         cutIndex = 2
 
-        if cubic.index("x") == len(cubic) - 1 or cubic[cubic.index("x")+1] in ["+", "-"]:
-            index = 2
+        if equation.index("x") == len(equation) - 1 or equation[equation.index("x")+1] in ["+", "-"]:
+            index = numCoefficients - 2
             cutIndex = 1
        
-        if cubic[:2] in ["-x", "+x"]:
-            coefficents[index] = int(cubic[:2].replace("x", "1"))
+        if equation[:2] in ["-x", "+x"]:
+            coefficents[index] = int(equation[:2].replace("x", "1"))
         else:
-            coefficents[index] = int("".join(x for x in cubic[:cubic.index("x")]))
+            coefficents[index] = float("".join(x for x in equation[:equation.index("x")]))
         
-        cubic = cubic[cubic.index("x")+cutIndex:]
+        equation = equation[equation.index("x")+cutIndex:]
 
-    if cubic:
-        coefficents[-1] = int(cubic)
+    if equation:
+        coefficents[-1] = int(equation)
     
     return coefficents
 
 def evaluate(equation):
 
-    equationLabel.config(text=inputField.get())
     equation = equation.replace("÷", "/")
     equation = equation.replace("x", "*")
 
@@ -172,7 +148,6 @@ def evaluate(equation):
                     indexOfOperation = min([operations.index('+'), operations.index('-')])
                 else:
                     indexOfOperation = operations.index(presentOps[0])
-
 
             print(numbers)
             print(operations)
@@ -205,48 +180,43 @@ def getNormalAnswer(equation):
         inputField.delete(0, "end")
         inputField.insert(len(inputField.get()), "Equation Not Valid")
 
-
     print("e-" + equation)
 
     finalAnswer = evaluate(equation)
     inputField.delete(0, "end")
     
     if finalAnswer:
-        if "." in finalAnswer:
-            if len(finalAnswer[finalAnswer.index("."):]) > 10:
-                finalAnswer = f'{round(float(finalAnswer), 10)}'
-
+        if ("." in finalAnswer and len(finalAnswer[finalAnswer.index("."):]) > 10):
+            finalAnswer = f'{round(float(finalAnswer), 10)}'
+        if "e" in finalAnswer:
+            exp = int(finalAnswer[finalAnswer.index("e")+1:])
+            finalAnswer = finalAnswer[:finalAnswer.index("e")] + "x10^" + str(exp)
+        elif len(finalAnswer) > 15:
+            floatAnswer = float(finalAnswer[0] + "." + finalAnswer[1:11])
+            if len(str(floatAnswer)) >= 11:
+                floatAnswer = round(floatAnswer, 9)
+            finalAnswer = str(floatAnswer) + "x10^" + str(len(finalAnswer[1:]))
 
         inputField.insert(len(inputField.get()), finalAnswer)
 
 
 def normalCalculator():
     global clear
-    global equals
-    global numbers
-    global openBracketBtn
-    global closeBracketBtn
-    global powerBtn
-    global divideBtn
-    global multiplyBtn
     global mode
-    global xCubedButton
+    global quadraticToNormal
+    global opButtons
 
     if not quadraticToNormal:
+        buttons = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        for i in range(len(buttons)):
+            y = 340 - (i//3 * 100)
+            x = (i%3) * 100 + 25
+            createButton(x, y, buttons[i])
+
         clear = True
         createButton(25, 40, "C")
         clear = False
-        numbers = True
-        createButton(25, 140, "7")
-        createButton(125, 140, "8")
-        createButton(225, 140, "9")
-        createButton(25, 240, "4")
-        createButton(125, 240, "5")
-        createButton(225, 240, "6")
-        createButton(25, 340, "1")
-        createButton(125, 340, "2")
-        createButton(225, 340, "3")
-        numbers = False
+
         createButton(25, 440, "0")
         createButton(125, 440, ".")
         createButton(325, 140, "-")
@@ -257,92 +227,72 @@ def normalCalculator():
         mode = "Normal"
         inputField.delete(0, END)
 
-    multiplyBtn = createButton(325, 340, "x")
-    divideBtn = createButton(325, 40, "÷")
-    openBracketBtn = createButton(125, 40, "(")
-    closeBracketBtn = createButton(225, 40, ")")
-    powerBtn = createButton(225, 440, "^")
     xCubedButton.destroy()
     xButton.destroy()
     equationLabel.config(text="")
 
+    btnDetails = [(325, 340, "x"), (325, 40, "+"), (125, 40, "("), (225, 40, ")"), (225, 440, "^")]
 
-def numberPressed(text):
-    global equalsPressed
-    if equalsPressed:
-        inputField.delete(0, 'end')
-        equalsPressed = False
-    inputField.insert(len(inputField.get()), text)
+    for i in range(len(opButtons)):
+        opButtons[i] = createButton(btnDetails[i][0], btnDetails[i][1], btnDetails[i][2])
 
 
-def characterPressed(text):
-    global equalsPressed
-    if equalsPressed:
-        equalsPressed = False
-    inputField.insert(len(inputField.get()), text)
-
+def buttonPressed(text):
+    inputField.insert(inputField.index(INSERT), text)
 
 def createButton(xCoord, yCoord, text) -> Button:
     global clear
-    global numbers
 
     if clear:
         btn = Button(canvas2, text=text, fg="black", bg=canvas2BG, borderwidth=0, font=("Montserrat bold", 20),
                      activebackground="#F0B75E", activeforeground="white",
                      command=lambda: inputField.delete(len(inputField.get()) - 1, END), width=3)
-    elif numbers:
-        btn = Button(canvas2, text=text, fg="black", bg=canvas2BG, borderwidth=0, font=("Montserrat bold", 20),
-                     activebackground="#F0B75E", activeforeground="white",
-                     command=lambda: numberPressed(text), width=3)
     else:
         btn = Button(canvas2, text=text, fg="black", bg=canvas2BG, borderwidth=0, font=("Montserrat bold", 20),
                      activebackground="#F0B75E", activeforeground="white",
-                     command=lambda: characterPressed(text), width=3)
+                     command=lambda: buttonPressed(text), width=3)
 
     btn.place(x=xCoord, y=yCoord)
     return btn
 
-
 def quadraticCalculator():
     global xSquaredButton
     global xButton
-    global mode
     global quadraticToNormal
+    global opButtons
 
-    mode = "Quadratic"
-    modeSwitch.config(text="Quadratic")
-    equationLabel.config(text="")
-    modeSwitch.config(command=lambda: cubicCalculator())
-    # modeSwitch.config(command=lambda: normalCalculator())
-    inputField.delete(0, 'end')
-    openBracketBtn.destroy()
-    xSquaredButton = createButton(125, 40, text="x²")
-    closeBracketBtn.destroy()
-    xButton = createButton(225, 40, text="x")
-    multiplyBtn.destroy()
-    divideBtn.destroy()
-    powerBtn.destroy()
+    xButton, xSquaredButton = changeMode("Quadratic", cubicCalculator, "x", "x²")
+
+    for button in opButtons:
+        button.destroy()
     quadraticToNormal = True
 
 def cubicCalculator():
-    global xSquaredButton
     global xButton
     global xCubedButton
+
+    xCubedButton = changeMode("Cubic", normalCalculator, "x³")
+    xButton.place(x=125, y=40)
+
+def changeMode(newMode, nextMode, btn1, btn2=None):
     global mode
 
-    modeSwitch.config(text="Cubic")
+    mode = newMode
+    modeSwitch.config(text=newMode)
     equationLabel.config(text="")
-    modeSwitch.config(command=lambda: normalCalculator())
+    modeSwitch.config(command=lambda: nextMode())
     inputField.delete(0, 'end')
-    xSquaredButton.place(x=225, y=40)
-    xButton.place(x=325, y=40)
-    xCubedButton = createButton(125, 40, text="x³")
-    mode = "Cubic"
+
+    buttonOne = createButton(325, 40, btn1)
+    if btn2:
+        buttonTwo = createButton(225, 40, btn2)
+        return buttonOne, buttonTwo
+    
+    return buttonOne
 
 def allClear():
     inputField.delete(0, END)
     equationLabel.config(text="")
-
 
 # MAIN PROGRAM
 main = Tk()
@@ -350,32 +300,16 @@ main.title("Calculator 🔢")
 main.geometry("420x720")
 main.resizable(False, False)
 
-numbers = False
 clear = False
-equals = False
-equalsPressed = False
 canvas1BG = "#68A7AD"
 main["bg"] = canvas1BG
 
 canvas2BG = "#252A34"
-openBracketBtn = Button()
-closeBracketBtn = Button()
-multiplyBtn = Button()
-powerBtn = Button()
-divideBtn = Button()
-xSquaredButton = Button()
-xButton = Button()
-xCubedButton = Button()
+xSquaredButton = xButton = xCubedButton = Button()
+opButtons = [Button()] * 5
 quadraticToNormal = False
-quadAnswer = ""
 
-answer = ""
-equationArray = []
-equationArrayTwo = []
 mode = "Normal"
-cubicMode = False
-
-# pyglet.font.add_file('Montserrat-VariableFont_wght.ttf')
 
 canvas = Canvas(main, width="400", height="190", highlightthickness=0,
                 highlightcolor=canvas1BG)
@@ -403,12 +337,11 @@ canvas2.pack_propagate(False)
 canvas2.pack()
 
 normalCalculator()
+
 equalsButton = Button(canvas2, text="=", fg="black", activebackground=canvas2BG, borderwidth=0, font=("Montserrat", 20),
                       width=3, activeforeground="white",
                       command=lambda: getAnswer(), bg="#F0B75E")
 equalsButton.place(x=325, y=440)
-
-main.bind("<Return>", getAnswer())
 
 main.mainloop()
  
